@@ -1,0 +1,45 @@
+version: '3'
+services:
+  gateway:
+    build:
+      context: .
+    command: sh -c "/usr/src/app/devops/wait-for-it.sh -t -1 database:5432 && /usr/src/app/devops/run_migrations.sh && /usr/src/app/devops/run_gateway.sh"
+    depends_on:
+      - database
+    volumes:
+      - ./src:/usr/src/app/kong/plugins/africastalking_ussd_routing
+      - ./devops:/usr/src/app/devops
+    environment:
+      - KONG_DATABASE=postgres
+      - KONG_PG_HOST=database
+      - KONG_LOG_LEVEL=info
+    ports:
+      - 8001:8001
+      - 8000:8000
+
+  database:
+    image: postgres:9.4
+    ports:
+      - 5433:5432
+    environment:
+      - POSTGRES_USER=kong
+      - POSTGRES_DB=kong
+
+  kong-ui:
+    image: pantsel/konga:0.8.3
+    depends_on:
+      - gateway
+    ports:
+      - 8081:1337
+
+  ngrok:
+    image: wernight/ngrok
+    command: ngrok http gateway:8000
+    depends_on:
+      - gateway
+    ports:
+      - 4041:4040
+    environment:
+      - NGROK_AUTH=6zENHXTPbYTDqPNDzx3sR_oaw8vi8qEKwoVjmG69Q2
+      - NGROK_REGION=eu
+      - NGROK_SUBDOMAIN=ivr-demo
